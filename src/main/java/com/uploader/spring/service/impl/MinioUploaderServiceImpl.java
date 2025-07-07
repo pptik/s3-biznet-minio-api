@@ -1,7 +1,16 @@
 package com.uploader.spring.service.impl;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.util.Iterator;
 import java.util.UUID;
+
+import javax.imageio.IIOImage;
+import javax.imageio.ImageIO;
+import javax.imageio.ImageWriteParam;
+import javax.imageio.ImageWriter;
+
+import java.awt.image.BufferedImage;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -21,6 +30,7 @@ import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
+import software.amazon.awssdk.services.s3.model.ObjectCannedACL;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 import software.amazon.awssdk.services.s3.model.S3Exception;
@@ -45,25 +55,97 @@ public class MinioUploaderServiceImpl implements UploaderService, ServeMinioServ
             throw new IOException("FIle Cannot be empty");
         }
 
-        String originalFilename = file.getOriginalFilename();
-        String fileExtension = "";
-
-        if (originalFilename != null && originalFilename.contains(".")) {
-            fileExtension = originalFilename.substring(originalFilename.lastIndexOf("."));
+        String contentType = file.getContentType();
+        if (contentType == null || !(contentType.startsWith("image/jpeg") ||
+                contentType.startsWith("image/png") ||
+                contentType.startsWith("image/gif") ||
+                contentType.startsWith("image/bmp"))) {
+            throw new IOException(
+                    "Unsupported file type. Only image file (JPEG, PNG, GIF, BMP) are allowed for WebP conversion.");
         }
 
-        String s3Key = UUID.randomUUID().toString() + fileExtension;
+        String originalFilename = file.getOriginalFilename();
+        String baseFilename = "";
+
+        if (originalFilename != null && originalFilename.contains(".")) {
+            baseFilename = originalFilename.substring(0, originalFilename.lastIndexOf("."));
+        } else if (originalFilename != null) {
+            baseFilename = originalFilename;
+        } else {
+            baseFilename = "untitled";
+        }
+
+        String outputFormat;
+        String outputMimeType;
+        String outputExtension;
+
+        if (contentType.startsWith("image/jpeg")) {
+            outputFormat = "jpeg";
+            outputMimeType = "image/jpeg";
+            outputExtension = ".jpg";
+        } else if (contentType.startsWith("image/png")) {
+            outputFormat = "png";
+            outputMimeType = "image/png";
+            outputExtension = ".png";
+        } else if (contentType.startsWith("image/gif")) {
+            outputFormat = "gif";
+            outputMimeType = "image/gif";
+            outputExtension = ".gif";
+        } else if (contentType.startsWith("image/bmp")) {
+            outputFormat = "bmp";
+            outputMimeType = "image/bmp";
+            outputExtension = ".bmp";
+        } else {
+            log.warn("Original content type {} not directly mapped for output. Defaulting to JPEG.",
+                    contentType);
+            outputFormat = "jpeg";
+            outputMimeType = "image/jpeg";
+            outputExtension = ".jpg";
+        }
+
+        String s3Key = baseFilename + "-" + UUID.randomUUID().toString().substring(0, 8) + outputExtension;
+
+        ByteArrayOutputStream os = new ByteArrayOutputStream();
 
         try {
+            BufferedImage originalImage = ImageIO.read(file.getInputStream());
+
+            if (originalImage == null) {
+                throw new IOException("Could not read image data from the provided file.");
+            }
+
+            Iterator<ImageWriter> writers = ImageIO.getImageWritersByMIMEType(outputMimeType);
+
+            if (!writers.hasNext()) {
+                throw new IOException(
+                        "ImageWriter for " + outputFormat
+                                + " not found. Ensure Java ImageIO has proper codec support.");
+            }
+
+            ImageWriter writer = writers.next();
+            ImageWriteParam writeParam = writer.getDefaultWriteParam();
+
+            if (writeParam.canWriteCompressed()) {
+                writeParam.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
+                writeParam.setCompressionQuality(0.01f);
+            }
+
+            writer.setOutput(ImageIO.createImageOutputStream(os));
+            writer.write(null, new IIOImage(originalImage, null, null), writeParam);
+            writer.dispose();
+
+            byte[] webpBytes = os.toByteArray();
+
             PutObjectRequest putObjectRequest = PutObjectRequest.builder()
                     .bucket(this.bucket)
                     .key(s3Key)
-                    .contentType(file.getContentType())
-                    .contentLength(file.getSize())
+                    .contentType(outputMimeType)
+                    .contentLength((long) webpBytes.length)
+                    .acl(ObjectCannedACL.PUBLIC_READ)
                     .build();
 
             PutObjectResponse putObjectResponse = this.s3Client.putObject(putObjectRequest,
-                    RequestBody.fromInputStream(file.getInputStream(), file.getSize()));
+                    RequestBody.fromBytes(webpBytes));
 
             log.info("File Uploaded successfully to s3. ETag: {}", putObjectResponse.eTag());
 
@@ -78,6 +160,12 @@ public class MinioUploaderServiceImpl implements UploaderService, ServeMinioServ
         } catch (IOException e) {
             log.error("File Processing Error", e.getMessage());
             throw new IOException("Failed to read file content: " + e.getMessage());
+        } finally {
+            try {
+                os.close();
+            } catch (IOException e) {
+                log.error("Error closing ByteArrayOutputStream: {}", e.getMessage());
+            }
         }
     }
 
