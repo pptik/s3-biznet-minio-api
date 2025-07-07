@@ -1,0 +1,59 @@
+{
+  "properties": [
+    {
+      "name": "biznet.s3.access-key",
+      "type": "java.lang.String",
+      "description": "A description for 'biznet.s3.access-key'"
+    },
+    {
+      "name": "biznet.s3.secret-key",
+      "type": "java.lang.String",
+      "description": "A description for 'biznet.s3.secret-key'"
+    },
+    {
+      "name": "biznet.s3.bucket",
+      "type": "java.lang.String",
+      "description": "A description for 'biznet.s3.bucket'"
+    },
+    {
+      "name": "biznet.s3.endpoint",
+      "type": "java.lang.String",
+      "description": "A description for 'biznet.s3.endpoint'"
+    },
+    {
+      "name": "biznet.s3.region",
+      "type": "java.lang.String",
+      "description": "A description for 'biznet.s3.region'"
+    },
+    {
+      "name": "app.api-key",
+      "type": "java.lang.String",
+      "description": "A description for 'app.api-key'"
+    },
+    {
+      "name": "minio.s3.access-key",
+      "type": "java.lang.String",
+      "description": "A description for 'minio.s3.access-key'"
+    },
+    {
+      "name": "minio.s3.secret-key",
+      "type": "java.lang.String",
+      "description": "A description for 'minio.s3.secret-key'"
+    },
+    {
+      "name": "minio.s3.bucket",
+      "type": "java.lang.String",
+      "description": "A description for 'minio.s3.bucket'"
+    },
+    {
+      "name": "minio.s3.endpoint",
+      "type": "java.lang.String",
+      "description": "A description for 'minio.s3.endpoint'"
+    },
+    {
+      "name": "minio.s3.region",
+      "type": "java.lang.String",
+      "description": "A description for 'minio.s3.region'"
+    }
+  ]
+}
