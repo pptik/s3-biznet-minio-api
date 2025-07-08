@@ -127,7 +127,7 @@ public class MinioUploaderServiceImpl implements UploaderService, ServeMinioServ
 
             if (writeParam.canWriteCompressed()) {
                 writeParam.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
-                writeParam.setCompressionQuality(0.01f);
+                writeParam.setCompressionQuality(0.7f);
             }
 
             writer.setOutput(ImageIO.createImageOutputStream(os));
