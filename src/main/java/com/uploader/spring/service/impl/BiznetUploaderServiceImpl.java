@@ -37,7 +37,7 @@ public class BiznetUploaderServiceImpl implements UploaderService {
     @Override
     public UploaderResponsedto uploadFile(MultipartFile file) throws IOException {
         if (file.isEmpty()) {
-            throw new IOException("FIle Cannot be empty");
+            throw new IOException("FIle Can't be empty");
         }
 
         String originalFilename = file.getOriginalFilename();
