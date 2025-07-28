@@ -119,7 +119,7 @@ public class MinioUploaderServiceImpl implements UploaderService, ServeMinioServ
             if (!writers.hasNext()) {
                 throw new IOException(
                         "ImageWriter for " + outputFormat
-                                + " not found. Ensure Java ImageIO has proper codec support.");
+                                + " not found. Ensure Java ImageIO has proper codec support installed.");
             }
 
             ImageWriter writer = writers.next();
